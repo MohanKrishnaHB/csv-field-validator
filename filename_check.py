@@ -34,6 +34,6 @@ if __name__ == "__main__":
         print("Usage: python script.py <file_path>")
     else:
         file_path = sys.argv[1]
-        predefined_file_name = "source.txt"
+        predefined_file_name = "source.csv"
         check_header(file_path, predefined_file_name)
 
