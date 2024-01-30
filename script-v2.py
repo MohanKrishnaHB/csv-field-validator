@@ -182,7 +182,9 @@ def process_files(folder, date):
                     # print_success(f"SUCCESS: File {file} validated and renamed successfully")
     print('Total CSV files: ', total_csv_files_in_folder)
     print('Total format matched files: ', total_files_matched_format)
-    print('Total missing column files: ', total_error_files)
+    print_error('Total missing column files: ' + str(total_error_files))
+    print_success('Total processed files: ' + str(total_files_matched_format - total_error_files))
+    
     report_error_files(folder + '\\' + CONSTANTS['reportFolderName'] + '\\' + CONSTANTS['reportFileName'], error_list)
 
 if __name__ == "__main__":
