@@ -71,7 +71,7 @@ def rename_file(old_name, new_name):
         print(f"An error occurred: {e}")
 
 def validate_file(file_name, predefined_columns):
-    target = pd.read_csv(file_name)
+    target = pd.read_csv(file_name, nrows=0)
     actual_columns = target.columns.tolist()
     missing_columns = set(predefined_columns) - set(actual_columns)
     return missing_columns
@@ -88,7 +88,7 @@ def get_file_type(file_name):
 def get_predefined_columns(file_type):
     global errors
     try:
-        master = pd.read_excel(CONSTANTS['masterFilePath'], sheet_name=file_type['sheetName'])
+        master = pd.read_excel(CONSTANTS['masterFilePath'], sheet_name='DC Metrics (Hist)')
         return master.iloc[:, 2].tolist()
     except Exception as e:
         errors = errors + [f"ERROR: Sheet {file_type['sheetName']} not found for type {file_type['fileIdentifier']}"]
