@@ -1,5 +1,6 @@
 CONSTANTS = {
     "masterFilePath": "source-master.xlsx",
+    "masterSheetName": "Reports",
     "processFolderName": "processed",
     "reportFolderName": "report",
     "reportFileName": "report.csv",
