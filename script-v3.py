@@ -58,7 +58,7 @@ def get_predefined_columns(file_type):
     global errors
     try:
         master = pd.read_excel(CONSTANTS['masterFilePath'], sheet_name=file_type['Report Definition'])
-        return master.iloc[:, 2].tolist()
+        return master.iloc[:, 3].tolist()
     except Exception as e:
         errors = errors + [f"ERROR: Sheet {file_type['Report Definition']} not found for type {file_type['File Type']}"]
         return None
