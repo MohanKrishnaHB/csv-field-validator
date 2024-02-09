@@ -36,14 +36,15 @@ def get_dates(file_name, file_type):
         return []
 
 def validate_date(file_name, file_type, date):
+    
     if str(file_type['Date Field']) != 'nan':
         dates = get_dates(file_name, file_type)
-        if date in dates:
+        matching_dates = [item for item in date.split(',') if item in dates]
+        if len(matching_dates)>0:
             return True
         return False
     else:
         return True
-
 
 def get_file_type(file_name, master_data):
     global errors
