@@ -107,7 +107,7 @@ def process_each_file(file, folder, date_to_append, master_data, date_to_validat
             if missing_columns or (not is_date_present):
                 error_list = error_list + [{
                     'Error_File': file,
-                    'Missing_Columns': missing_columns,
+                    'Missing_Columns': missing_columns if len(missing_columns)>0 else 'All Columns are present',
                     'date_missing': not is_date_present
                 }]
                 total_error_files = total_error_files + 1
