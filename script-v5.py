@@ -1,4 +1,3 @@
-import concurrent.futures
 import os
 import pandas as pd
 import sys
@@ -7,15 +6,12 @@ from config import CONSTANTS
 from utils import *
 import re
 import math 
-from functools import partial
+import gzip
+import shutil
+
 
 errors = ['----------------------------------ERRORS----------------------------------']
 invalid_files_info = []
-error_list = []
-total_csv_files_in_folder = 0
-total_files_matched_format = 0
-total_error_files = 0
-max_workers = 5
 
 def get_files(folder_path):
     try:
@@ -82,53 +78,43 @@ def create_required_folders(folder):
     create_folder(folder + '\\' + CONSTANTS['reportFolderName'])
     create_folder(folder + '\\' + CONSTANTS['processFolderName'])
 
-def process_each_file(file, folder, date_to_append, master_data, date_to_validate, debug):
-    global error_list
-    global total_csv_files_in_folder
-    global total_files_matched_format
-    global total_error_files
-    if debug == 'debug':
-        print(f'file: {file}')
-    file_type = get_file_type(file, master_data)
-    if debug == 'debug':
-        print(f'file_type: {file_type}')
-    if file_type:
-        predefined_columns = get_predefined_columns(file_type)
-        if debug == 'debug':
-            print(f'predefined_columns: {predefined_columns}')
-        if predefined_columns:
-            total_files_matched_format = total_files_matched_format + 1
-            missing_columns = validate_columns(folder + '\\' + file, predefined_columns)
-            if debug == 'debug':
-                print(f'missing_columns: {missing_columns}')
-            is_date_present = validate_date(folder + '\\' + file, file_type, date_to_validate)
-            if debug == 'debug':
-                print(f'is_date_present: {is_date_present}')
-            if missing_columns or (not is_date_present):
-                error_list = error_list + [{
-                    'Error_File': file,
-                    'Missing_Columns': missing_columns if len(missing_columns)>0 else 'All Columns are present in this file but date is missing',
-                    'date_missing': "Date not found in this file" if not is_date_present else "Date is present in this file but column is missing"
-                }]
-                total_error_files = total_error_files + 1
-                # print_error(f"ERROR: Missing Columns for file {file}")
-            else:
-                move_file(folder, folder + '\\' + CONSTANTS['processFolderName'], file)
-                rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + file, folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(file)[0] + date_to_append + '.csv')
-                # print_success(f"SUCCESS: File {file} validated and renamed successfully")
-
 def process_files(folder, date_to_append, master_data, date_to_validate, debug):
     files = get_files(folder)
-    global error_list
-    global total_csv_files_in_folder
-    global total_files_matched_format
-    global total_error_files
-    
+    total_csv_files_in_folder = len(files)
+    total_files_matched_format = 0
+    total_error_files = 0
+    error_list = []
     create_required_folders(folder)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        process_func = partial(process_each_file, folder=folder, date_to_append=date_to_append, master_data=master_data, date_to_validate=date_to_validate, debug=debug)
-        results = list(tqdm(executor.map(process_func, files), total=len(files), desc="Processing"))
-    
+    for file in tqdm(files, desc="Processing files", unit="file"):
+        if debug == 'debug':
+            print(f'file: {file}')
+        file_type = get_file_type(file, master_data)
+        if debug == 'debug':
+            print(f'file_type: {file_type}')
+        if file_type:
+            predefined_columns = get_predefined_columns(file_type)
+            if debug == 'debug':
+                print(f'predefined_columns: {predefined_columns}')
+            if predefined_columns:
+                total_files_matched_format = total_files_matched_format + 1
+                missing_columns = validate_columns(folder + '\\' + file, predefined_columns)
+                if debug == 'debug':
+                    print(f'missing_columns: {missing_columns}')
+                is_date_present = validate_date(folder + '\\' + file, file_type, date_to_validate)
+                if debug == 'debug':
+                    print(f'is_date_present: {is_date_present}')
+                if missing_columns or (not is_date_present):
+                    error_list = error_list + [{
+                        'Error_File': file,
+                        'Missing_Columns': missing_columns if len(missing_columns)>0 else 'All Columns are present in this file but date is missing',
+                        'date_missing': "Date not found in this file" if not is_date_present else "Date is present in this file but column is missing"
+                    }]
+                    total_error_files = total_error_files + 1
+                    # print_error(f"ERROR: Missing Columns for file {file}")
+                else:
+                    move_file(folder, folder + '\\' + CONSTANTS['processFolderName'], file)
+                    rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + file, folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(file)[0] + date_to_append + '.csv')
+                    # print_success(f"SUCCESS: File {file} validated and renamed successfully")
     print('Total CSV files: ', total_csv_files_in_folder)
     print('Total format matched files: ', total_files_matched_format)
     print_error('Total missing column files: ' + str(total_error_files))
@@ -171,6 +157,42 @@ def update_invalid_list(invalid_info):
 #     report_invalid_files(folder + '\\' + CONSTANTS['reportFolderName'] + '\\' + CONSTANTS['reportFileName'], invalid_files_info)
 #     print_finishing_info(files, invalid_files_info, errors)
 
+# Unzip and move files
+
+def get_gz_files(folder_path):
+    try:
+        files = os.listdir(folder_path)
+        return [item for item in files if item.lower().endswith('.gz')]
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+
+def unzip_gz_files(folder_path):
+    create_folder(folder_path + '\\Unzipped')
+    count = 0
+    successCount = 0
+    files = get_gz_files(folder_path)
+    try:
+        for file_name in tqdm(files, desc="Extracting files", unit="file"):
+            gz_file_path = os.path.join(folder_path, file_name)
+            if file_name.lower().endswith('.gz'):
+                count = count + 1
+                extracted_file_path = os.path.join(folder_path, file_name[:-3])  # Remove the .gz extension
+
+                with gzip.open(gz_file_path, 'rb') as gz_file:
+                    with open(extracted_file_path, 'wb') as extracted_file:
+                        shutil.copyfileobj(gz_file, extracted_file)
+                move_file(folder_path, folder_path + '\\Unzipped', file_name)
+                successCount = successCount + 1
+                # print(f"Extracted: {gz_file_path} -> {extracted_file_path}")
+
+        if count == 0:
+            print_success(f'No .gz files to extract.')
+        else:
+            print_success(f'{successCount} out of {count} .gz files have been successfully extracted.')
+    except Exception as e:
+        print_error(f"Error while unzipping: {e}")
+    
+
 if __name__ == "__main__":
     if len(sys.argv) < 4:
         print("Usage: python script-v2.py <folder-path> <date to append Ex: -2024-12-31> <date to validate Ex: -2024-12-31>")
@@ -183,7 +205,7 @@ if __name__ == "__main__":
         folder_path = sys.argv[1]
         date_to_append = sys.argv[2]
         date_to_validate = sys.argv[3]
-        
+        unzip_gz_files(folder_path)
         master_data = get_master_data(CONSTANTS['masterFilePath'], CONSTANTS['masterSheetName'])
         process_files(folder_path, date_to_append, master_data, date_to_validate, debug)
         if len(errors) > 1:
