@@ -32,7 +32,7 @@ def validate_columns(file_name, predefined_columns):
 def get_dates(file_name, file_type):
     global errors
     try:
-        target = pd.read_csv(file_name, usecols=[file_type['Date Field']])
+        target = pd.read_csv(file_name, usecols=[file_type['Date Field']], dtype={file_type['Date Field']: str})
         return target.values
     except Exception as e:
         errors = errors + [f"ERROR: Date field {file_type['Date Field']} not found in file {file_name} of type {file_type['File Type']}"]
