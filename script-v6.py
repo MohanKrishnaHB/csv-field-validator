@@ -89,12 +89,12 @@ def delete_file(file_path):
     except Exception as e:
         print(f"Error occurred while trying to delete file '{file_path}': {e}")
 
-def move_processed_file(folder, filename):
+def move_processed_file(folder, filename, date_to_append):
     unzipped_dir = os.path.join(folder, "Unzipped")
     gz_file_path = os.path.join(unzipped_dir, filename + ".gz")
     if os.path.isfile(gz_file_path):
         move_file(unzipped_dir, folder + '\\' + CONSTANTS['processFolderName'], filename + ".gz")
-        rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + gz_file_path, folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(os.path.splitext(gz_file_path)[0])[0] + date_to_append + '.csv.gz')
+        rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename + ".gz", folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(filename)[0] + date_to_append + '.csv.gz')
         delete_file(os.path.join(folder, filename))
     else:
         move_file(folder, folder + '\\' + CONSTANTS['processFolderName'], filename)
@@ -134,7 +134,7 @@ def process_files(folder, date_to_append, master_data, date_to_validate, debug):
                     total_error_files = total_error_files + 1
                     # print_error(f"ERROR: Missing Columns for file {file}")
                 else:
-                    move_processed_file(folder, file)
+                    move_processed_file(folder, file, date_to_append)
                     # print_success(f"SUCCESS: File {file} validated and renamed successfully")
     print('Total CSV files: ', total_csv_files_in_folder)
     print('Total format matched files: ', total_files_matched_format)
