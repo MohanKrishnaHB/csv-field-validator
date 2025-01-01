@@ -90,16 +90,37 @@ def delete_file(file_path):
     except Exception as e:
         print(f"Error occurred while trying to delete file '{file_path}': {e}")
 
+def rename_processed_file(file_path, date_to_append):
+    dir_name, base_name = os.path.split(file_path)
+
+    # Handle double extension like .csv.gz
+    if base_name.endswith('.csv.gz'):
+        base, ext = base_name[:-7], '.csv.gz'  # Split the .csv.gz part
+    else:
+        base, ext = os.path.splitext(base_name)
+    
+    # Check if filename ends with _ followed by single digit
+    if re.search(r'_\d$', base):
+        new_base = re.sub(r'(_\d)$', f'{date_to_append}\\1', base)
+    else:
+        new_base = f'{base}{date_to_append}'
+    
+    new_file_path = os.path.join(dir_name, new_base + ext)
+    rename_file(file_path, new_file_path)
+    
+
 def move_processed_file(folder, filename, date_to_append):
     unzipped_dir = os.path.join(folder, "Unzipped")
     gz_file_path = os.path.join(unzipped_dir, filename + ".gz")
     if os.path.isfile(gz_file_path):
         move_file(unzipped_dir, folder + '\\' + CONSTANTS['processFolderName'], filename + ".gz")
-        rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename + ".gz", folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(filename)[0] + date_to_append + '.csv.gz')
+        rename_processed_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename + ".gz", date_to_append)
+        # rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename + ".gz", folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(filename)[0] + date_to_append + '.csv.gz')
         delete_file(os.path.join(folder, filename))
     else:
         move_file(folder, folder + '\\' + CONSTANTS['processFolderName'], filename)
-        rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename, folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(filename)[0] + date_to_append + '.csv')
+        rename_processed_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename, date_to_append)
+        # rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename, folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(filename)[0] + date_to_append + '.csv')
 
 def check_count_against_date(file_path, date_column, target_date, columns_to_check):
     chunk_size = 100000  # Adjust chunk size as needed
