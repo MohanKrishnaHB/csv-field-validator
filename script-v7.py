@@ -100,8 +100,8 @@ def rename_processed_file(file_path, date_to_append):
         base, ext = os.path.splitext(base_name)
     
     # Check if filename ends with _ followed by single digit
-    if re.search(r'_\d$', base):
-        new_base = re.sub(r'(_\d)$', f'{date_to_append}\\1', base)
+    if re.search(r'_\d\d$', base):
+        new_base = re.sub(r'(_\d\d)$', f'{date_to_append}\\1', base)
     else:
         new_base = f'{base}{date_to_append}'
     
