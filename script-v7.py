@@ -82,7 +82,7 @@ def create_required_folders(folder):
 def delete_file(file_path):
     try:
         os.remove(file_path)
-        print(f"File '{file_path}' has been deleted successfully.")
+        # print(f"File '{file_path}' has been deleted successfully.")
     except FileNotFoundError:
         print(f"File '{file_path}' not found.")
     except PermissionError:
@@ -138,7 +138,7 @@ def check_count_against_date(file_path, date_column, target_date, columns_to_che
             date_found = True
             # Check each column for values greater than 0
             for column in columns_to_check:
-                if (filtered_chunk[column] > 0).any():
+                if (filtered_chunk[column] != '0').any():
                     continue
                 else:
                     column_errors.append(column)
@@ -201,7 +201,7 @@ def process_files(folder, date_to_append, master_data, date_to_validate, debug):
                     # print_success(f"SUCCESS: File {file} validated and renamed successfully")
     print('Total CSV files: ', total_csv_files_in_folder)
     print('Total format matched files: ', total_files_matched_format)
-    print_error('Total missing column files: ' + str(total_error_files))
+    print_error('Total files with failed validations: ' + str(total_error_files))
     print_success('Total processed files: ' + str(total_files_matched_format - total_error_files))
     
     report_invalid_files(folder + '\\' + CONSTANTS['reportFolderName'] + '\\' + CONSTANTS['reportFileName'], error_list)
