@@ -78,6 +78,28 @@ def create_required_folders(folder):
     create_folder(folder + '\\' + CONSTANTS['reportFolderName'])
     create_folder(folder + '\\' + CONSTANTS['processFolderName'])
 
+def delete_file(file_path):
+    try:
+        os.remove(file_path)
+        print(f"File '{file_path}' has been deleted successfully.")
+    except FileNotFoundError:
+        print(f"File '{file_path}' not found.")
+    except PermissionError:
+        print(f"Permission denied: Unable to delete file '{file_path}'.")
+    except Exception as e:
+        print(f"Error occurred while trying to delete file '{file_path}': {e}")
+
+def move_processed_file(folder, filename, date_to_append):
+    unzipped_dir = os.path.join(folder, "Unzipped")
+    gz_file_path = os.path.join(unzipped_dir, filename + ".gz")
+    if os.path.isfile(gz_file_path):
+        move_file(unzipped_dir, folder + '\\' + CONSTANTS['processFolderName'], filename + ".gz")
+        rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename + ".gz", folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(filename)[0] + date_to_append + '.csv.gz')
+        delete_file(os.path.join(folder, filename))
+    else:
+        move_file(folder, folder + '\\' + CONSTANTS['processFolderName'], filename)
+        rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename, folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(filename)[0] + date_to_append + '.csv')
+
 def process_files(folder, date_to_append, master_data, date_to_validate, debug):
     files = get_files(folder)
     total_csv_files_in_folder = len(files)
@@ -112,8 +134,7 @@ def process_files(folder, date_to_append, master_data, date_to_validate, debug):
                     total_error_files = total_error_files + 1
                     # print_error(f"ERROR: Missing Columns for file {file}")
                 else:
-                    move_file(folder, folder + '\\' + CONSTANTS['processFolderName'], file)
-                    rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + file, folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(file)[0] + date_to_append + '.csv')
+                    move_processed_file(folder, file, date_to_append)
                     # print_success(f"SUCCESS: File {file} validated and renamed successfully")
     print('Total CSV files: ', total_csv_files_in_folder)
     print('Total format matched files: ', total_files_matched_format)

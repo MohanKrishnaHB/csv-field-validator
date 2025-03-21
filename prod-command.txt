@@ -1,0 +1,1 @@
+python .\script-v7.py 'C:\Users\mohan\Documents\DigitalDi\Python Shiv\mohan_script\mohan_script\Prod files' '01012025' '2025-01-01'
