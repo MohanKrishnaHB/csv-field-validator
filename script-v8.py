@@ -152,7 +152,9 @@ def check_count_against_date(file_path, date_column, target_date, columns_to_che
             date_found = True
             # Check each column for values greater than 0
             for column in columns_to_check:
-                if (filtered_chunk[column] != '0').any():
+                # Normalize values to float for comparison
+                normalized_values = pd.to_numeric(filtered_chunk[column], errors='coerce').fillna(0)
+                if (normalized_values != 0).any():
                     continue
                 else:
                     column_errors.append(column)
