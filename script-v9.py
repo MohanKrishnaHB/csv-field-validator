@@ -230,7 +230,8 @@ def process_files(folder, date_to_append, master_data, date_to_validate, debug, 
     }) for item in nonCsvOrGzFiles]
 
     error_list = error_list + nonCsvOrGzFilesError
-    print(error_list)
+    if(error_list):
+        print(error_list)
     report_invalid_files(folder + '\\' + CONSTANTS['reportFolderName'] + '\\' + CONSTANTS['reportFileName'], error_list)
 
 def get_master_data(master_file_path, master_sheet_name):
@@ -302,14 +303,24 @@ def unzip_gz_files(folder_path):
             print_success(f'{successCount} out of {count} .gz files have been successfully extracted.')
     except Exception as e:
         print_error(f"Error while unzipping: {e}")
-    
+
+def convertCsvFilesToGz(folderPath):
+    files = get_files(folderPath)
+    for file in tqdm(files, desc="Compressing files", unit="file"):
+        if file.lower().endswith('.csv'):
+            csv_file_path = os.path.join(folderPath, file)
+            gz_file_path = os.path.join(folderPath, file + '.gz')
+            with open(csv_file_path, 'rb') as f_in:
+                with gzip.open(gz_file_path, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+            delete_file(csv_file_path)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 5:
+    if len(sys.argv) < 6:
         print("Usage: python script-v2.py <folder-path> <date to append Ex: -2024-12-31> <date to validate Ex: 2024-12-31> <date to validate count against Ex: 2024-12-31>")
     else:
         try:
-            debug = sys.argv[5]
+            debug = sys.argv[6]
         except Exception as e:
             debug = ''
 
@@ -317,9 +328,12 @@ if __name__ == "__main__":
         date_to_append = sys.argv[2]
         date_to_validate = sys.argv[3]
         date_to_validate_count = sys.argv[4]
+        file_format = sys.argv[5]
         unzip_gz_files(folder_path)
         master_data = get_master_data(CONSTANTS['masterFilePath'], CONSTANTS['masterSheetName'])
         process_files(folder_path, date_to_append, master_data, date_to_validate, debug, date_to_validate_count)
+        if(file_format=='gz'):
+            convertCsvFilesToGz(folder_path + '\\' + CONSTANTS['processFolderName'])
         if len(errors) > 1:
             for error in errors:
                 print_error(error)
