@@ -6,6 +6,7 @@ from config import CONSTANTS
 from utils import *
 import re
 import math 
+import zipfile
 import gzip
 import shutil
 
@@ -22,7 +23,7 @@ def get_files(folder_path):
 
 
 def isNotCSVOrGz(fileName):
-    if (len(os.path.splitext(fileName)) > 1) and (len(os.path.splitext(fileName)[1]) > 1) and not (os.path.splitext(fileName)[1].lower() == '.csv' or os.path.splitext(fileName)[1].lower() == '.gz'):
+    if (len(os.path.splitext(fileName)) > 1) and (len(os.path.splitext(fileName)[1]) > 1) and not (os.path.splitext(fileName)[1].lower() == '.csv' or os.path.splitext(fileName)[1].lower() == '.gz' or os.path.splitext(fileName)[1].lower() == '.zip'):
         return True
     return False
 
@@ -109,9 +110,12 @@ def rename_processed_file(file_path, date_to_append):
     # Handle double extension like .csv.gz
     if base_name.endswith('.csv.gz'):
         base, ext = base_name[:-7], '.csv.gz'  # Split the .csv.gz part
+    # Handle double extension like .csv.zip
+    if base_name.endswith('.csv.zip'):
+        base, ext = base_name[:-4], '.zip'  # Split the .csv.zip part
     else:
         base, ext = os.path.splitext(base_name)
-    
+
     # Check if filename ends with _ followed by single digit
     if re.search(r'_\d\d$', base):
         new_base = re.sub(r'(_\d\d)$', f'{date_to_append}\\1', base)
@@ -125,12 +129,19 @@ def rename_processed_file(file_path, date_to_append):
 def move_processed_file(folder, filename, date_to_append):
     unzipped_dir = os.path.join(folder, "Unzipped")
     gz_file_path = os.path.join(unzipped_dir, filename + ".gz")
+    zip_file_path = os.path.join(unzipped_dir, filename + ".zip")
     if os.path.isfile(gz_file_path):
         move_file(unzipped_dir, folder + '\\' + CONSTANTS['processFolderName'], filename + ".gz")
         rename_processed_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename + ".gz", date_to_append)
         # rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename + ".gz", folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(filename)[0] + date_to_append + '.csv.gz')
         delete_file(os.path.join(folder, filename))
         delete_file(os.path.join(unzipped_dir, filename + ".gz"))
+    elif os.path.isfile(zip_file_path):
+        move_file(unzipped_dir, folder + '\\' + CONSTANTS['processFolderName'], filename + ".zip")
+        rename_processed_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename + ".zip", date_to_append)
+        # rename_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename + ".zip", folder + '\\' + CONSTANTS['processFolderName'] + '\\' + os.path.splitext(filename)[0] + date_to_append + '.csv.zip')
+        delete_file(os.path.join(folder, filename))
+        delete_file(os.path.join(unzipped_dir, filename + ".zip"))
     else:
         move_file(folder, folder + '\\' + CONSTANTS['processFolderName'], filename)
         rename_processed_file(folder + '\\' + CONSTANTS['processFolderName'] + '\\' + filename, date_to_append)
@@ -274,7 +285,7 @@ def get_master_data(master_file_path, master_sheet_name):
 def get_gz_files(folder_path):
     try:
         files = os.listdir(folder_path)
-        return [item for item in files if item.lower().endswith('.gz')]
+        return [item for item in files if (item.lower().endswith('.gz') or item.lower().endswith('.zip'))]
     except FileNotFoundError as e:
         print(f"Error: {e}")
 
@@ -282,34 +293,49 @@ def unzip_gz_files(folder_path):
     create_folder(folder_path + '\\Unzipped')
     count = 0
     successCount = 0
-    files = get_gz_files(folder_path)
+    files = os.listdir(folder_path)
+
     try:
         for file_name in tqdm(files, desc="Extracting files", unit="file"):
-            gz_file_path = os.path.join(folder_path, file_name)
-            if file_name.lower().endswith('.gz'):
-                count = count + 1
-                extracted_file_path = os.path.join(folder_path, file_name[:-3])  # Remove the .gz extension
+            file_path = os.path.join(folder_path, file_name)
 
-                with gzip.open(gz_file_path, 'rb') as gz_file:
-                    with open(extracted_file_path, 'wb') as extracted_file:
-                        shutil.copyfileobj(gz_file, extracted_file)
-                move_file(folder_path, folder_path + '\\Unzipped', file_name)
-                successCount = successCount + 1
-                # print(f"Extracted: {gz_file_path} -> {extracted_file_path}")
+            # Handle .gz files
+            if file_name.lower().endswith('.gz'):
+                count += 1
+                extracted_file_path = os.path.join(folder_path, file_name[:-3])  # Remove .gz extension
+                try:
+                    with gzip.open(file_path, 'rb') as gz_file:
+                        with open(extracted_file_path, 'wb') as extracted_file:
+                            shutil.copyfileobj(gz_file, extracted_file)
+                    move_file(folder_path, folder_path + '\\Unzipped', file_name)
+                    successCount += 1
+                except Exception as e:
+                    print_error(f"Failed to extract {file_name}: {e}")
+
+            # Handle .zip files
+            elif file_name.lower().endswith('.zip'):
+                count += 1
+                try:
+                    with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                        zip_ref.extractall(folder_path)
+                    move_file(folder_path, folder_path + '\\Unzipped', file_name)
+                    successCount += 1
+                except Exception as e:
+                    print_error(f"Failed to extract {file_name}: {e}")
 
         if count == 0:
-            print_success(f'No .gz files to extract.')
+            print_success('No .gz or .zip files to extract.')
         else:
-            print_success(f'{successCount} out of {count} .gz files have been successfully extracted.')
-    except Exception as e:
-        print_error(f"Error while unzipping: {e}")
+            print_success(f'{successCount} out of {count} compressed files have been successfully extracted.')
 
-def convertCsvFilesToGz(folderPath):
+    except Exception as e:
+        print_error(f"Error during extraction: {e}")
+def convertCsvFilesToGz(folderPath, fileExtension):
     files = get_files(folderPath)
     for file in tqdm(files, desc="Compressing files", unit="file"):
         if file.lower().endswith('.csv'):
             csv_file_path = os.path.join(folderPath, file)
-            gz_file_path = os.path.join(folderPath, file + '.gz')
+            gz_file_path = os.path.join(folderPath, file + fileExtension)
             with open(csv_file_path, 'rb') as f_in:
                 with gzip.open(gz_file_path, 'wb') as f_out:
                     shutil.copyfileobj(f_in, f_out)
@@ -332,8 +358,9 @@ if __name__ == "__main__":
         unzip_gz_files(folder_path)
         master_data = get_master_data(CONSTANTS['masterFilePath'], CONSTANTS['masterSheetName'])
         process_files(folder_path, date_to_append, master_data, date_to_validate, debug, date_to_validate_count)
-        if(file_format=='gz'):
-            convertCsvFilesToGz(folder_path + '\\' + CONSTANTS['processFolderName'])
+        if(file_format=='gz' or file_format=='zip'):
+            convertCsvFilesToGz(folder_path + '\\' + CONSTANTS['processFolderName'], fileExtension='.gz')
+            convertCsvFilesToGz(folder_path + '\\' + CONSTANTS['processFolderName'], fileExtension='.zip')
         if len(errors) > 1:
             for error in errors:
                 print_error(error)
