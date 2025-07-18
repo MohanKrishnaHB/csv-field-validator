@@ -97,8 +97,8 @@ def delete_file(file_path):
     try:
         os.remove(file_path)
         # print(f"File '{file_path}' has been deleted successfully.")
-    except FileNotFoundError:
-        print(f"File '{file_path}' not found.")
+    # except FileNotFoundError:
+    #     print(f"File '{file_path}' not found.")
     except PermissionError:
         print(f"Permission denied: Unable to delete file '{file_path}'.")
     except Exception as e:
@@ -106,16 +106,17 @@ def delete_file(file_path):
 
 def rename_processed_file(file_path, date_to_append):
     dir_name, base_name = os.path.split(file_path)
-
+    
     # Handle double extension like .csv.gz
     if base_name.endswith('.csv.gz'):
-        base, ext = base_name[:-7], '.csv.gz'  # Split the .csv.gz part
+        base = base_name[:-len('.csv.gz')]
+        ext = '.csv.gz'
     # Handle double extension like .csv.zip
-    if base_name.endswith('.csv.zip'):
-        base, ext = base_name[:-4], '.zip'  # Split the .csv.zip part
+    elif base_name.endswith('.csv.zip'):
+        base = base_name[:-len('.csv.zip')]
+        ext = '.csv.zip'
     else:
         base, ext = os.path.splitext(base_name)
-
     # Check if filename ends with _ followed by single digit
     if re.search(r'_\d\d$', base):
         new_base = re.sub(r'(_\d\d)$', f'{date_to_append}\\1', base)
