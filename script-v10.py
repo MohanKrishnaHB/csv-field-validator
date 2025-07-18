@@ -289,6 +289,26 @@ def get_gz_files(folder_path):
     except FileNotFoundError as e:
         print(f"Error: {e}")
 
+
+def unzip_zip_file(zip_path, extract_to=None):
+    # Use current directory if no extraction path is provided
+    if extract_to is None:
+        extract_to = os.path.splitext(zip_path)[0]  # Folder named after zip file
+
+    # Ensure the extraction directory exists
+    os.makedirs(extract_to, exist_ok=True)
+
+    # Unzip the file
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_to)
+
+def delete_folder(folder_path):
+    if os.path.exists(folder_path):
+        shutil.rmtree(folder_path)
+    else:
+        print(f"Folder not found to delete: {folder_path}")
+
+
 def unzip_gz_files(folder_path):
     create_folder(folder_path + '\\Unzipped')
     count = 0
@@ -316,8 +336,8 @@ def unzip_gz_files(folder_path):
             elif file_name.lower().endswith('.zip'):
                 count += 1
                 try:
-                    with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                        zip_ref.extractall(folder_path)
+                    unzip_zip_file(file_path, os.path.join(folder_path, 'Unzipped'))
+                    move_file(os.path.join(folder_path, 'Unzipped'), folder_path, file_name[:-4])
                     move_file(folder_path, folder_path + '\\Unzipped', file_name)
                     successCount += 1
                 except Exception as e:
