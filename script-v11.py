@@ -5,10 +5,10 @@ from tqdm import tqdm
 from config import CONSTANTS
 from utils import *
 import re
-import math 
 import zipfile
 import gzip
 import shutil
+import time
 
 
 errors = ['----------------------------------ERRORS----------------------------------']
@@ -351,23 +351,14 @@ def unzip_gz_files(folder_path):
 
     except Exception as e:
         print_error(f"Error during extraction: {e}")
-def convertCsvFilesToGz(folderPath, fileExtension):
-    files = get_files(folderPath)
-    for file in tqdm(files, desc="Compressing files", unit="file"):
-        if file.lower().endswith('.csv'):
-            csv_file_path = os.path.join(folderPath, file)
-            gz_file_path = os.path.join(folderPath, file + fileExtension)
-            with open(csv_file_path, 'rb') as f_in:
-                with gzip.open(gz_file_path, 'wb') as f_out:
-                    shutil.copyfileobj(f_in, f_out)
-            delete_file(csv_file_path)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 6:
+    start_time = time.time()
+    if len(sys.argv) < 5:
         print("Usage: python script-v2.py <folder-path> <date to append Ex: -2024-12-31> <date to validate Ex: 2024-12-31> <date to validate count against Ex: 2024-12-31>")
     else:
         try:
-            debug = sys.argv[6]
+            debug = sys.argv[5]
         except Exception as e:
             debug = ''
 
@@ -375,13 +366,16 @@ if __name__ == "__main__":
         date_to_append = sys.argv[2]
         date_to_validate = sys.argv[3]
         date_to_validate_count = sys.argv[4]
-        file_format = sys.argv[5]
         unzip_gz_files(folder_path)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"===Unzipped in {elapsed_time:.4f} seconds===")
         master_data = get_master_data(CONSTANTS['masterFilePath'], CONSTANTS['masterSheetName'])
+        
         process_files(folder_path, date_to_append, master_data, date_to_validate, debug, date_to_validate_count)
-        if(file_format=='gz' or file_format=='zip'):
-            convertCsvFilesToGz(folder_path + '\\' + CONSTANTS['processFolderName'], fileExtension='.gz')
-            convertCsvFilesToGz(folder_path + '\\' + CONSTANTS['processFolderName'], fileExtension='.zip')
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"===processed in {elapsed_time:.4f} seconds===")
         if len(errors) > 1:
             for error in errors:
                 print_error(error)
